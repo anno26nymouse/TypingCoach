@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Typing AI Trainer - Precision Mode v2</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f172a">
@@ -699,9 +702,40 @@ function updateRealtimeDash() {
 
 // ===== SERVICE WORKER & SPLASH =====
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => console.log('SW fail: ', err));
-    });
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdatePopup();
+          }
+        });
+      });
+
+    }).catch(err => console.log('SW fail:', err));
+  });
+}
+
+function showUpdatePopup() {
+  const btn = document.createElement('button');
+  btn.innerText = "Update Available - Refresh";
+  btn.style.position = "fixed";
+  btn.style.bottom = "20px";
+  btn.style.left = "50%";
+  btn.style.transform = "translateX(-50%)";
+  btn.style.padding = "10px 20px";
+  btn.style.background = "#38bdf8";
+  btn.style.color = "black";
+  btn.style.border = "none";
+  btn.style.borderRadius = "10px";
+  btn.style.zIndex = "9999";
+
+  btn.onclick = () => window.location.reload();
+
+  document.body.appendChild(btn);
 }
 
 window.addEventListener('load', () => {
