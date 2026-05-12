@@ -1,362 +1,1327 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
-    <title>Typing AI Trainer - Adaptive Motor-Learning v3</title>
-    <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#54cdff">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --deep-navy: #0f172a; --navy-panel: #1e293b; --primary-blue: #38bdf8;
-            --soft-grey: #94a3b8; --fresh-green: #22c55e; --alert-red: #EF233C; --warn-yellow: #f59e0b;
-        }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--deep-navy); color: white; overflow: hidden; }
-        .app { display: grid; grid-template-columns: 300px 1fr 320px; height: 100vh; }
-        .sidebar, .rightbar { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); padding: 20px; border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto; }
-        .rightbar { border-right: none; border-left: 1px solid rgba(255,255,255,0.05); }
-        .card { background: rgba(255,255,255,0.03); border-radius: 14px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.02); }
-        .card h3 { margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: var(--soft-grey); display: flex; align-items: center; gap: 8px; }
-        .bar-container { height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
-        .bar-fill { display: block; height: 100%; width: 0%; background: var(--primary-blue); transition: width 0.3s; }
-        .main { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; }
-        .target { font-size: 50px; margin: 20px 0; font-family: 'Courier New', monospace; font-weight: bold; }
-        .target span { opacity: 0.2; }
-        .target span.correct { color: var(--fresh-green); opacity: 1; text-shadow: 0 0 15px var(--fresh-green); }
-        .target span.error { color: var(--alert-red); opacity: 1; }
-        input { font-size: 30px; padding: 10px; width: 300px; text-align: center; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; outline: none; font-family: monospace; }
-        .advisor-box { border-left: 3px solid var(--primary-blue); padding-left: 10px; font-size: 13px; line-height: 1.4; }
-        .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
-        .tag-ready { background: var(--fresh-green); color: black; }
-        .tag-hold { background: var(--warn-yellow); color: black; }
-        #splash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--deep-navy); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: 0.8s; }
-        .fade-out { opacity: 0; pointer-events: none; }
-        .keyboard { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
-        .key { padding: 10px 0; background: rgba(255,255,255,0.05); text-align: center; border-radius: 4px; font-size: 12px; }
-        .key.weak { border: 1px solid var(--alert-red); color: var(--alert-red); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>TypingAI — Motor-Learning v4</title>
+<meta name="theme-color" content="#38bdf8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TypingAI">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ─── DESIGN TOKENS ───────────────────────────────────────── */
+:root {
+  --deep-navy:   #0a0f1e;
+  --panel:       #111827;
+  --panel-border:#1f2d45;
+  --blue:        #38bdf8;
+  --blue-dim:    rgba(56,189,248,.12);
+  --green:       #22c55e;
+  --green-dim:   rgba(34,197,94,.12);
+  --red:         #ef4444;
+  --red-dim:     rgba(239,68,68,.12);
+  --yellow:      #f59e0b;
+  --yellow-dim:  rgba(245,158,11,.12);
+  --muted:       #475569;
+  --text:        #e2e8f0;
+  --font-mono:   'Courier New', Courier, monospace;
+}
+
+/* ─── RESET ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { touch-action: manipulation; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--deep-navy);
+  color: var(--text);
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  height: 100dvh;
+}
+
+/* ─── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 4px; }
+
+/* ─── GRID LAYOUT ─────────────────────────────────────────── */
+.app {
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
+  grid-template-rows: 100dvh;
+}
+
+/* ─── PANELS ──────────────────────────────────────────────── */
+.sidebar, .rightbar {
+  background: var(--panel);
+  border-color: var(--panel-border);
+  padding: 16px 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sidebar { border-right: 1px solid var(--panel-border); }
+.rightbar { border-left: 1px solid var(--panel-border); }
+
+/* ─── CARD ────────────────────────────────────────────────── */
+.card {
+  background: rgba(255,255,255,.025);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 13px 14px;
+}
+.card h3 {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.card h3 i { font-size: 11px; }
+
+/* ─── BAR ─────────────────────────────────────────────────── */
+.bar-track {
+  height: 5px;
+  background: rgba(255,255,255,.06);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: var(--blue);
+  transition: width .4s cubic-bezier(.4,0,.2,1), background .4s;
+}
+
+/* ─── MAIN ────────────────────────────────────────────────── */
+.main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  position: relative;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(56,189,248,.04) 0%, transparent 70%),
+    var(--deep-navy);
+  overflow: hidden;
+}
+.main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(56,189,248,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* ─── LEVEL TAG ───────────────────────────────────────────── */
+.level-tag {
+  position: absolute;
+  top: 18px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  color: var(--blue);
+  text-transform: uppercase;
+  z-index: 1;
+}
+
+/* ─── TARGET DISPLAY ──────────────────────────────────────── */
+.target-wrap {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 6px;
+}
+#target {
+  font-family: var(--font-mono);
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  line-height: 1;
+  display: flex;
+  gap: 2px;
+}
+#target span {
+  color: var(--muted);
+  transition: color .08s, text-shadow .08s;
+}
+#target span.correct {
+  color: var(--green);
+  text-shadow: 0 0 20px rgba(34,197,94,.7);
+}
+#target span.wrong {
+  color: var(--red);
+  text-shadow: 0 0 20px rgba(239,68,68,.7);
+  animation: shake .18s ease;
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  33%      { transform: translateX(-4px); }
+  66%      { transform: translateX(4px); }
+}
+
+/* ─── INPUT ───────────────────────────────────────────────── */
+#input {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-align: center;
+  width: 280px;
+  padding: 10px 16px;
+  background: rgba(0,0,0,.4);
+  border: 2px solid var(--panel-border);
+  border-radius: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s;
+  touch-action: manipulation;
+  position: relative;
+  z-index: 1;
+}
+#input:focus  { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(56,189,248,.12); }
+#input.shake  { animation: shake .2s ease; }
+
+/* ─── ADVICE BAR ──────────────────────────────────────────── */
+#advice {
+  margin-top: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  min-height: 18px;
+  letter-spacing: .03em;
+  z-index: 1;
+  transition: color .2s;
+}
+
+/* ─── FATIGUE WARNING ─────────────────────────────────────── */
+#fatigue-warning {
+  display: none;
+  margin-top: 8px;
+  padding: 6px 14px;
+  background: var(--red-dim);
+  border: 1px solid var(--red);
+  border-radius: 8px;
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  z-index: 1;
+  animation: pulseGlow 1.2s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,.3); }
+  50%      { opacity: .75; box-shadow: 0 0 12px 4px rgba(239,68,68,.15); }
+}
+
+/* ─── READINESS DISPLAY ───────────────────────────────────── */
+.big-number {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--blue);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+.advisor-box {
+  border-left: 2px solid var(--blue);
+  padding-left: 9px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  margin-top: 4px;
+}
+
+/* ─── FATIGUE BAR ─────────────────────────────────────────── */
+.fatigue-number {
+  font-size: 26px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  line-height: 1;
+  transition: color .4s;
+}
+
+/* ─── HEATMAP KEYBOARD ────────────────────────────────────── */
+.keyboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+.key {
+  padding: 11px 0;
+  text-align: center;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--panel-border);
+  color: var(--muted);
+  transition: background .5s, border-color .5s, color .5s, box-shadow .5s;
+  cursor: default;
+}
+.key.mastered {
+  background: var(--green-dim);
+  border-color: var(--green);
+  color: var(--green);
+  box-shadow: 0 0 8px rgba(34,197,94,.12);
+}
+.key.unstable {
+  background: var(--yellow-dim);
+  border-color: var(--yellow);
+  color: var(--yellow);
+  box-shadow: 0 0 8px rgba(245,158,11,.12);
+}
+.key.weak {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+  box-shadow: 0 0 8px rgba(239,68,68,.12);
+}
+
+/* ─── TRANSITION LIST ─────────────────────────────────────── */
+.trans-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.trans-row:last-child { border-bottom: none; }
+
+/* ─── STAT ROW ────────────────────────────────────────────── */
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+  color: var(--muted);
+}
+.stat-row span:last-child { color: var(--text); font-weight: 600; font-family: var(--font-mono); }
+
+/* ─── SPLASH ──────────────────────────────────────────────── */
+#splash {
+  position: fixed;
+  inset: 0;
+  background: var(--deep-navy);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity .8s ease;
+}
+#splash.fade-out { opacity: 0; pointer-events: none; }
+.splash-logo {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: .2em;
+  color: var(--blue);
+  margin-bottom: 10px;
+}
+.splash-sub { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+.splash-ver { font-size: 10px; color: var(--muted); margin-top: 8px; opacity: .6; }
+.splash-bar {
+  width: 200px;
+  height: 2px;
+  background: rgba(255,255,255,.06);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 18px;
+}
+.splash-bar-fill {
+  height: 100%;
+  background: var(--blue);
+  border-radius: 99px;
+  width: 0%;
+  animation: splashLoad 1.8s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes splashLoad { to { width: 100%; } }
+
+/* ─── PWA BANNERS ─────────────────────────────────────────── */
+#update-banner {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: var(--blue);
+  color: var(--deep-navy);
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  z-index: 10001;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+#update-banner:hover { opacity: .85; }
+
+#install-banner {
+  display: none;
+  position: fixed;
+  bottom: 18px; left: 50%; transform: translateX(-50%);
+  background: var(--panel);
+  border: 1px solid var(--blue);
+  border-radius: 14px;
+  padding: 12px 18px;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+  z-index: 10000;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  white-space: nowrap;
+}
+.btn-pwa {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: .05em;
+}
+.btn-install { background: var(--blue); color: var(--deep-navy); }
+.btn-dismiss { background: rgba(255,255,255,.08); color: var(--muted); }
+
+#offline-badge {
+  display: none;
+  position: fixed;
+  top: 8px; right: 10px;
+  background: var(--yellow);
+  color: var(--deep-navy);
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  z-index: 10000;
+}
+
+/* ─── MOBILE RESPONSIVE ───────────────────────────────────── */
+@media (max-width: 900px) {
+  body { overflow-y: auto; }
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100dvh;
+  }
+  .sidebar { order: 2; border-right: none; border-top: 1px solid var(--panel-border); }
+  .rightbar { order: 3; border-left: none; border-top: 1px solid var(--panel-border); }
+  .main {
+    order: 1;
+    min-height: 55dvh;
+  }
+  #target { font-size: 40px; }
+  #input  { font-size: 22px; width: 230px; }
+  .keyboard { grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .key { padding: 13px 0; font-size: 13px; }
+  #install-banner { bottom: 10px; left: 8px; right: 8px; transform: none; white-space: normal; }
+}
+
+@media (max-width: 480px) {
+  #target { font-size: 32px; letter-spacing: .04em; }
+  #input  { font-size: 18px; width: 200px; }
+}
+
+/* ─── MISC ────────────────────────────────────────────────── */
+.pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.pill-green  { background: var(--green-dim);  color: var(--green);  border: 1px solid var(--green); }
+.pill-yellow { background: var(--yellow-dim); color: var(--yellow); border: 1px solid var(--yellow); }
+.pill-blue   { background: var(--blue-dim);   color: var(--blue);   border: 1px solid var(--blue); }
+.pill-muted  { background: rgba(255,255,255,.04); color: var(--muted); border: 1px solid var(--panel-border); }
+</style>
 </head>
 <body>
 
-<div id="splash">
-    <h1 style="color: var(--primary-blue); font-family: monospace;">MOTOR-LEARNING V3</h1>
-    <p style="color: var(--soft-grey);">Calibrating Adaptive Neural Sync...</p>
+<!-- ─── PWA BANNERS ──────────────────────────────────────────── -->
+<div id="update-banner">🔄 VERSI BARU TERSEDIA — Tap untuk update</div>
+<div id="offline-badge">📴 OFFLINE</div>
+<div id="install-banner">
+  <span>📲 Install TypingAI ke homescreen?</span>
+  <button class="btn-pwa btn-install" id="btn-install">Install</button>
+  <button class="btn-pwa btn-dismiss" id="btn-dismiss">✕</button>
 </div>
 
+<!-- ─── SPLASH ───────────────────────────────────────────────── -->
+<div id="splash">
+  <div class="splash-logo">MOTOR-LEARNING V4</div>
+  <div class="splash-sub">ADAPTIVE NEURAL SYNC — CALIBRATING</div>
+  <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+  <div class="splash-ver" id="splash-ver"></div>
+</div>
+
+<!-- ─── APP GRID ─────────────────────────────────────────────── -->
 <div class="app">
-    <!-- LEFT SIDEBAR: REALTIME ANALYTICS -->
-    <div class="sidebar">
-        <div class="card">
-            <h3><i class="fa-solid fa-brain"></i> Neural Readiness</h3>
-            <div id="readiness-score" style="font-size: 28px; font-weight: bold; color: var(--primary-blue);">0%</div>
-            <div id="readiness-tag" style="margin-top:5px"></div>
-        </div>
 
-        <div class="card">
-            <h3><i class="fa-solid fa-wave-square"></i> Rhythm Stability</h3>
-            <div id="jitter-text" style="font-size: 14px;">Jitter: 0ms</div>
-            <div class="bar-container" style="margin-top:8px">
-                <div id="rhythm-bar" class="bar-fill"></div>
-            </div>
-        </div>
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar">
 
-        <div class="card">
-            <h3><i class="fa-solid fa-gauge-high"></i> Dynamic Threshold</h3>
-            <div id="threshold-text" style="font-size: 14px;">Floor: 300ms</div>
-            <p style="font-size: 10px; color: var(--soft-grey);">Sistem memaksa Anda mengetik dalam ritme stabil, bukan maksimal.</p>
-        </div>
-
-        <div class="card" id="coach-card">
-            <h3><i class="fa-solid fa-user-tie"></i> Level Advisor</h3>
-            <div id="advisor-content" class="advisor-box">Menganalisa pola...</div>
-        </div>
+    <div class="card">
+      <h3><i class="fa-solid fa-brain"></i> Neural Readiness</h3>
+      <div class="big-number" id="readiness-score">0%</div>
+      <div id="readiness-pill" style="margin-top:6px"></div>
+      <div class="bar-track"><div class="bar-fill" id="readiness-bar"></div></div>
     </div>
 
-    <!-- MAIN AREA -->
-    <div class="main">
-        <div style="position: absolute; top: 20px; font-size: 12px; color: var(--primary-blue); letter-spacing: 2px;">
-            LEVEL <span id="lvl-num">1</span>: <span id="lvl-name">ISOLATION</span>
-        </div>
-        
-        <div id="target" class="target"></div>
-        <input id="input" autocomplete="off" spellcheck="false" placeholder="Fokus pada ritme...">
-        
-        <div id="advice" style="margin-top: 20px; font-weight: bold; min-height: 20px; color: var(--soft-grey);"></div>
-        
-        <div id="fatigue-warning" style="display:none; margin-top:10px; color: var(--alert-red); font-size: 12px; animation: pulse 1s infinite;">
-            ⚠️ FATIGUE DETECTED: Precision drop.
-        </div>
+    <div class="card">
+      <h3><i class="fa-solid fa-wave-square"></i> Rhythm Stability</h3>
+      <div style="font-size:13px;color:var(--text)" id="jitter-text">Jitter: —</div>
+      <div class="bar-track" style="margin-top:8px">
+        <div class="bar-fill" id="rhythm-bar"></div>
+      </div>
     </div>
 
-    <!-- RIGHT SIDEBAR: TRANSITION & HEATMAP -->
-    <div class="rightbar">
-        <div class="card">
-            <h3><i class="fa-solid fa-bolt"></i> Transition Mastery</h3>
-            <div id="transition-list" style="font-size: 12px; font-family: monospace;"></div>
-        </div>
-
-        <div class="card">
-            <h3><i class="fa-solid fa-fingerprint"></i> Finger Weakness</h3>
-            <div class="keyboard" id="keyboard-map">
-                <!-- JS Populated -->
-            </div>
-        </div>
-
-        <div class="card">
-            <h3><i class="fa-solid fa-history"></i> Session Stats</h3>
-            <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                <span>Accuracy</span><span id="stat-acc">0%</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 5px;">
-                <span>Avg Reaction</span><span id="stat-react">0ms</span>
-            </div>
-        </div>
+    <div class="card">
+      <h3><i class="fa-solid fa-gauge-high"></i> Adaptive Floor</h3>
+      <div style="font-size:13px;color:var(--text)" id="threshold-text">Floor: —</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:5px;line-height:1.4">
+        Ritme stabil lebih penting dari kecepatan maksimal.
+      </div>
     </div>
+
+    <div class="card">
+      <h3><i class="fa-solid fa-fire-flame-curved"></i> Fatigue Score</h3>
+      <div class="fatigue-number" id="fatigue-number" style="color:var(--green)">0%</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:3px" id="fatigue-detail">—</div>
+      <div class="bar-track"><div class="bar-fill" id="fatigue-bar" style="background:var(--green)"></div></div>
+    </div>
+
+    <div class="card" style="flex:1">
+      <h3><i class="fa-solid fa-user-tie"></i> Level Advisor</h3>
+      <div class="advisor-box" id="advisor-content">Menganalisa pola...</div>
+    </div>
+
+  </div>
+
+  <!-- MAIN AREA -->
+  <div class="main">
+    <div class="level-tag">Level <span id="lvl-num">1</span> — <span id="lvl-name">ISOLATION</span></div>
+
+    <div class="target-wrap">
+      <div id="target"></div>
+    </div>
+
+    <input
+      id="input"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+      placeholder="Fokus pada ritme..."
+    >
+
+    <div id="advice"></div>
+    <div id="fatigue-warning">⚠ FATIGUE — Pertimbangkan istirahat sejenak</div>
+  </div>
+
+  <!-- RIGHT SIDEBAR -->
+  <div class="rightbar">
+
+    <div class="card">
+      <h3><i class="fa-solid fa-bolt"></i> Slowest Transitions</h3>
+      <div id="transition-list"><div style="color:var(--muted);font-size:11px">Belum ada data...</div></div>
+    </div>
+
+    <div class="card">
+      <h3><i class="fa-solid fa-fingerprint"></i> Finger Heatmap</h3>
+      <div class="keyboard" id="keyboard-map"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <span class="pill pill-green">● Mastered</span>
+        <span class="pill pill-yellow">● Unstable</span>
+        <span class="pill" style="background:var(--red-dim);color:var(--red);border:1px solid var(--red)">● Weak</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><i class="fa-solid fa-chart-line"></i> Session Stats</h3>
+      <div class="stat-row"><span>Accuracy</span><span id="stat-acc">—</span></div>
+      <div class="stat-row"><span>Avg Reaction</span><span id="stat-react">—</span></div>
+      <div class="stat-row"><span>Best Reaction</span><span id="stat-best">—</span></div>
+      <div class="stat-row"><span>Total Strokes</span><span id="stat-strokes">0</span></div>
+      <div class="stat-row"><span>Errors</span><span id="stat-errors">0</span></div>
+    </div>
+
+  </div>
 </div>
 
 <script>
-/**
- * MOTOR-LEARNING TYPING ENGINE v3
- * Modular, Adaptive, Procedural.
- */
+/* ================================================================
+   MOTOR-LEARNING TYPING ENGINE v4
+   All 30 upgrades applied:
+   CORE(10) + UI/MOBILE(10) + PWA(10)
+   ================================================================ */
 
+// ── [CORE-04] APP & SCHEMA VERSION ────────────────────────────────
+const APP_VERSION    = '4.0.0';
+const SCHEMA_VERSION = 2;
+
+// ── CONFIG ────────────────────────────────────────────────────────
 const CONFIG = {
-    BASE_KEYS: { LEFT: ['a','s','d','f'], RIGHT: ['j','k','l',';'] },
-    LEVELS: [
-        { id: 1, name: "Isolation", pairs: 2 },
-        { id: 2, name: "Triples", pairs: 3 },
-        { id: 3, name: "Full Rolls", pairs: 4 },
-        { id: 4, name: "Cross-Hand", pairs: 4, alternating: true },
-        { id: 5, name: "Chaos Mode", pairs: 5, chaos: true },
-        { id: 6, name: "Endurance", pairs: 8 }
-    ],
-    MIN_FLOOR_MS: 180, // Absolute fastest limit
-    STABILITY_THRESHOLD: 0.15 // 15% jitter max
+  APP_VERSION,
+  SCHEMA_VERSION,
+
+  BASE_KEYS: {
+    LEFT:  ['a','s','d','f'],
+    RIGHT: ['j','k','l',';']
+  },
+  LEVELS: [
+    { id:1, name:'Isolation',   pairs:2 },
+    { id:2, name:'Triples',     pairs:3 },
+    { id:3, name:'Full Rolls',  pairs:4 },
+    { id:4, name:'Cross-Hand',  pairs:4, alternating:true },
+    { id:5, name:'Chaos Mode',  pairs:5, chaos:true },
+    { id:6, name:'Endurance',   pairs:8 }
+  ],
+
+  // ── [CORE-10] Impossible speed threshold
+  IMPOSSIBLE_SPEED_MS: 50,
+  MIN_FLOOR_MS:        80,
+
+  MAX_TRANSITION_HISTORY: 20,
+  MAX_REACTION_HISTORY:   100,
+  MAX_TRANSITIONS_STORED: 200,
+
+  // ── [CORE-03] Autosave interval
+  AUTOSAVE_INTERVAL_MS: 5000,
+
+  FATIGUE: {
+    JITTER_SPIKE_MS:   150,
+    DRIFT_THRESHOLD:   0.30,
+    ACC_COLLAPSE:      0.85,
+    W_JITTER:          0.40,
+    W_DRIFT:           0.35,
+    W_ACC:             0.25
+  }
 };
 
-// --- DATA PERSISTENCE & STATE ---
-let state = {
-    level: 1,
-    currentWord: "",
-    lastCharTime: 0,
-    transitions: {}, // Map of "s>d" : { times: [], avg: 0 }
-    recentJitters: [],
-    errors: 0,
-    totalStrokes: 0,
-    correctStrokes: 0,
-    sessionStart: Date.now(),
-    history: JSON.parse(localStorage.getItem('typing_history') || '[]')
+/* ── [CORE-03] DEFAULT STATE FACTORY ──────────────────────────── */
+function createDefaultState() {
+  return {
+    schemaVersion:  SCHEMA_VERSION,
+    appVersion:     APP_VERSION,
+    level:          1,
+    currentWord:    '',
+    lastCharTime:   0,
+    lastChar:       null,
+    // ── [CORE-09] weighted transitions
+    transitions:    {},   // key: "a>s", val: { times[], avg, weight }
+    // ── [CORE-07] reaction history
+    reactionHistory: [],  // [{ delay, char }]
+    jitterHistory:   [],  // rolling absolute jitter deltas
+    errors:          0,
+    totalStrokes:    0,
+    correctStrokes:  0,
+    // ── [CORE-08] fatigue components
+    fatigueScore:    0,
+    fatigueComps:    { jitter:0, drift:0, acc:0 }
+  };
+}
+
+let state = createDefaultState();
+
+/* ── [CORE-03][CORE-04] PERSISTENT STORAGE ────────────────────── */
+const Storage = {
+  KEY: 'typingai_v4',
+
+  save() {
+    try {
+      const payload = {
+        schemaVersion:   state.schemaVersion,
+        appVersion:      APP_VERSION,
+        level:           state.level,
+        transitions:     state.transitions,
+        reactionHistory: state.reactionHistory.slice(-CONFIG.MAX_REACTION_HISTORY),
+        jitterHistory:   state.jitterHistory.slice(-60),
+        errors:          state.errors,
+        totalStrokes:    state.totalStrokes,
+        correctStrokes:  state.correctStrokes,
+        fatigueScore:    state.fatigueScore,
+        savedAt:         Date.now()
+      };
+      localStorage.setItem(this.KEY, JSON.stringify(payload));
+    } catch(e) { console.warn('[Storage] Save failed:', e); }
+  },
+
+  load() {
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+
+      // ── [CORE-04] schema migration check
+      if (!parsed.schemaVersion || parsed.schemaVersion < SCHEMA_VERSION) {
+        console.log('[Storage] Schema mismatch — resetting');
+        this.clear();
+        return null;
+      }
+      return parsed;
+    } catch(e) {
+      // ── [PWA-08] recovery for corrupted cached states
+      console.warn('[Storage] Corrupted state — resetting:', e);
+      this.clear();
+      return null;
+    }
+  },
+
+  merge(saved) {
+    if (!saved) return;
+    state.level          = saved.level          || 1;
+    state.transitions    = saved.transitions    || {};
+    state.reactionHistory= saved.reactionHistory|| [];
+    state.jitterHistory  = saved.jitterHistory  || [];
+    state.errors         = saved.errors         || 0;
+    state.totalStrokes   = saved.totalStrokes   || 0;
+    state.correctStrokes = saved.correctStrokes || 0;
+    state.fatigueScore   = saved.fatigueScore   || 0;
+  },
+
+  clear() { localStorage.removeItem(this.KEY); }
 };
 
-// --- PROCEDURAL GENERATOR ---
+// ── [CORE-03] Autosave every 5 seconds
+setInterval(() => Storage.save(), CONFIG.AUTOSAVE_INTERVAL_MS);
+window.addEventListener('beforeunload', () => Storage.save());
+
+
+/* ── [CORE-06] STRUCTURED TRANSITION-CHAIN GENERATOR ─────────── */
 const Generator = {
-    generate() {
-        const lvl = CONFIG.LEVELS[state.level - 1];
-        let word = "";
-        
-        // Adaptive: Sering munculkan transisi terlemah
-        const weakest = Advisor.getWeakestTransition();
-        
-        if (weakest && Math.random() > 0.4) {
-            word = weakest.replace('>', '');
-            while(word.length < lvl.pairs) word += word[Math.floor(Math.random() * word.length)];
-        } else {
-            if (lvl.chaos) {
-                const all = [...CONFIG.BASE_KEYS.LEFT, ...CONFIG.BASE_KEYS.RIGHT];
-                for(let i=0; i<lvl.pairs; i++) word += all[Math.floor(Math.random()*all.length)];
-            } else if (lvl.alternating) {
-                for(let i=0; i<lvl.pairs/2; i++) {
-                    word += CONFIG.BASE_KEYS.LEFT[Math.floor(Math.random()*4)];
-                    word += CONFIG.BASE_KEYS.RIGHT[Math.floor(Math.random()*4)];
-                }
-            } else {
-                const side = Math.random() > 0.5 ? CONFIG.BASE_KEYS.LEFT : CONFIG.BASE_KEYS.RIGHT;
-                for(let i=0; i<lvl.pairs; i++) word += side[Math.floor(Math.random()*4)];
-            }
-        }
-        return word;
+  generate() {
+    const lvl = CONFIG.LEVELS[state.level - 1];
+    if (lvl.chaos)       return this._chaosChain(lvl.pairs);
+    if (lvl.alternating) return this._altChain(lvl.pairs);
+    return this._adaptiveChain(lvl.pairs);
+  },
+
+  // Adaptive: starts from weakest known transition, then extends
+  _adaptiveChain(len) {
+    const weakPair = Advisor.getWeakestTransition();
+    const all = [...CONFIG.BASE_KEYS.LEFT, ...CONFIG.BASE_KEYS.RIGHT];
+
+    if (weakPair && Math.random() < 0.65) {
+      const [from, to] = weakPair.split('>');
+      let chain = from + to;
+      while (chain.length < len) {
+        const next = this._nextWeakFrom(chain[chain.length-1], all);
+        chain += next || all[Math.floor(Math.random()*all.length)];
+      }
+      return chain.slice(0, len);
     }
+
+    // Single-hand roll
+    const side = Math.random() > .5 ? CONFIG.BASE_KEYS.LEFT : CONFIG.BASE_KEYS.RIGHT;
+    let chain = side[Math.floor(Math.random()*4)];
+    while (chain.length < len) {
+      const next = this._nextWeakFrom(chain[chain.length-1], side);
+      chain += next || side[Math.floor(Math.random()*4)];
+    }
+    return chain;
+  },
+
+  _altChain(len) {
+    let chain = '';
+    for (let i = 0; i < len/2; i++) {
+      chain += CONFIG.BASE_KEYS.LEFT[Math.floor(Math.random()*4)];
+      chain += CONFIG.BASE_KEYS.RIGHT[Math.floor(Math.random()*4)];
+    }
+    return chain;
+  },
+
+  _chaosChain(len) {
+    const all = [...CONFIG.BASE_KEYS.LEFT, ...CONFIG.BASE_KEYS.RIGHT];
+    let c = '';
+    for (let i=0; i<len; i++) c += all[Math.floor(Math.random()*all.length)];
+    return c;
+  },
+
+  // Find the next key from `fromKey` that has the worst avg time
+  _nextWeakFrom(fromKey, pool) {
+    const candidates = pool
+      .map(k => ({ key:k, data: state.transitions[`${fromKey}>${k}`] }))
+      .filter(c => c.data && c.data.avg > 0)
+      .sort((a,b) => b.data.avg - a.data.avg);
+    if (candidates.length > 0 && Math.random() < .72) return candidates[0].key;
+    return null;
+  }
 };
 
-// --- ANALYTICS ENGINE ---
+/* ── ANALYTICS ENGINE ────────────────────────────────────────── */
 const Analytics = {
-    track(char, prevChar, delay) {
-        state.totalStrokes++;
-        
-        if (prevChar) {
-            const pair = `${prevChar}>${char}`;
-            if (!state.transitions[pair]) state.transitions[pair] = { times: [], avg: 0 };
-            
-            // Simpan 10 record terakhir per transisi
-            state.transitions[pair].times.push(delay);
-            if (state.transitions[pair].times.length > 10) state.transitions[pair].times.shift();
-            
-            state.transitions[pair].avg = state.transitions[pair].times.reduce((a,b)=>a+b,0) / state.transitions[pair].times.length;
-            
-            // Jitter Analysis (Consistency)
-            if (state.transitions[pair].times.length > 2) {
-                const last = state.transitions[pair].times[state.transitions[pair].times.length-1];
-                const prev = state.transitions[pair].times[state.transitions[pair].times.length-2];
-                state.recentJitters.push(Math.abs(last - prev));
-                if (state.recentJitters.length > 20) state.recentJitters.shift();
-            }
-        }
+
+  // ── [CORE-07] Track with full reaction history
+  track(char, prevChar, delay) {
+    state.totalStrokes++;
+    state.reactionHistory.push({ delay, char });
+    if (state.reactionHistory.length > CONFIG.MAX_REACTION_HISTORY)
+      state.reactionHistory.shift();
+
+    if (!prevChar || delay <= 0) return;
+
+    const pair = `${prevChar}>${char}`;
+    if (!state.transitions[pair])
+      state.transitions[pair] = { times:[], avg:0, weight:1 };
+
+    const t = state.transitions[pair];
+    t.times.push(delay);
+    if (t.times.length > CONFIG.MAX_TRANSITION_HISTORY) t.times.shift();
+    t.avg = t.times.reduce((a,b)=>a+b,0) / t.times.length;
+
+    // ── [CORE-09] Weighted adaptive learning engine
+    // Slower avg → higher weight → more practice needed
+    t.weight = Math.min(4, t.avg / 180);
+
+    // Jitter tracking
+    if (t.times.length > 2) {
+      const n = t.times.length;
+      const jitter = Math.abs(t.times[n-1] - t.times[n-2]);
+      state.jitterHistory.push(jitter);
+      if (state.jitterHistory.length > 60) state.jitterHistory.shift();
     }
+
+    // ── [CORE-05] Cleanup oversized transition map
+    this._cleanupTransitions();
+  },
+
+  _cleanupTransitions() {
+    const keys = Object.keys(state.transitions);
+    if (keys.length <= CONFIG.MAX_TRANSITIONS_STORED) return;
+    // Prune entries with fewest samples (least reliable)
+    keys
+      .sort((a,b) => state.transitions[a].times.length - state.transitions[b].times.length)
+      .slice(0, keys.length - CONFIG.MAX_TRANSITIONS_STORED)
+      .forEach(k => delete state.transitions[k]);
+  },
+
+  // ── [CORE-02] True adaptive floor from averaged jitter
+  getAdaptiveFloor() {
+    if (state.jitterHistory.length < 3) return 300;
+    const avgJitter = this.getAvgJitter();
+    const avgReact  = this.getAvgReaction();
+    return Math.round(Math.max(CONFIG.MIN_FLOOR_MS, avgReact * 0.38 + avgJitter * 0.28));
+  },
+
+  getAvgJitter() {
+    if (!state.jitterHistory.length) return 0;
+    return state.jitterHistory.reduce((a,b)=>a+b,0) / state.jitterHistory.length;
+  },
+
+  getAvgReaction() {
+    const recent = state.reactionHistory.slice(-20);
+    if (!recent.length) return 0;
+    return Math.round(recent.reduce((a,b)=>a+b.delay,0) / recent.length);
+  },
+
+  getBestReaction() {
+    if (!state.reactionHistory.length) return null;
+    return Math.round(Math.min(...state.reactionHistory.map(r=>r.delay)));
+  }
 };
 
-// --- LEVEL ADVISOR ENGINE ---
+/* ── [CORE-08] DYNAMIC FATIGUE ENGINE ───────────────────────── */
+const Fatigue = {
+  compute() {
+    if (state.totalStrokes < 25) return 0;
+
+    // 1. Jitter spike
+    const avgJ = Analytics.getAvgJitter();
+    const jitterScore = Math.min(1, avgJ / CONFIG.FATIGUE.JITTER_SPIKE_MS);
+
+    // 2. Reaction drift (recent vs early)
+    let driftScore = 0;
+    if (state.reactionHistory.length >= 15) {
+      const early  = state.reactionHistory.slice(0,  8).map(r=>r.delay);
+      const recent = state.reactionHistory.slice(-8).map(r=>r.delay);
+      const avgE   = early.reduce((a,b)=>a+b,0)  / early.length;
+      const avgR   = recent.reduce((a,b)=>a+b,0) / recent.length;
+      driftScore   = Math.min(1, Math.max(0, (avgR - avgE) / avgE));
+    }
+
+    // 3. Accuracy collapse
+    const acc = state.totalStrokes > 0 ? state.correctStrokes / state.totalStrokes : 1;
+    const accScore = Math.max(0, 1 - (acc / CONFIG.FATIGUE.ACC_COLLAPSE));
+
+    state.fatigueComps = {
+      jitter: Math.round(jitterScore * 100),
+      drift:  Math.round(driftScore  * 100),
+      acc:    Math.round(accScore    * 100)
+    };
+
+    const total = jitterScore * CONFIG.FATIGUE.W_JITTER
+                + driftScore  * CONFIG.FATIGUE.W_DRIFT
+                + accScore    * CONFIG.FATIGUE.W_ACC;
+
+    state.fatigueScore = Math.round(Math.min(100, total * 100));
+    return state.fatigueScore;
+  }
+};
+
+/* ── ADVISOR ENGINE ──────────────────────────────────────────── */
 const Advisor = {
-    getWeakestTransition() {
-        let max = 0, pair = null;
-        for (let p in state.transitions) {
-            if (state.transitions[p].avg > max) {
-                max = state.transitions[p].avg;
-                pair = p;
-            }
-        }
-        return pair;
-    },
-
-    evaluateLevelReady() {
-        if (state.totalStrokes < 50) return { score: 0, status: "COLLECTING DATA", color: "grey" };
-
-        const acc = (state.correctStrokes / state.totalStrokes);
-        const avgJitter = state.recentJitters.reduce((a,b)=>a+b,0) / state.recentJitters.length;
-        const stability = Math.max(0, 1 - (avgJitter / 200)); 
-        
-        const score = (acc * 0.4) + (stability * 0.6);
-        const finalScore = Math.round(score * 100);
-
-        let recommendation = "";
-        if (finalScore > 85 && acc > 0.95) {
-            recommendation = "🟢 READY: Ritme sangat stabil. Siap naik level.";
-        } else if (acc < 0.90) {
-            recommendation = "🟡 HOLD: Akurasi rendah. Fokus pada presisi.";
-        } else {
-            recommendation = "🔵 PRACTICE: Kecepatan oke, tapi ritme (jitter) belum konsisten.";
-        }
-
-        return { score: finalScore, status: recommendation, acc: Math.round(acc*100), jitter: Math.round(avgJitter) };
+  getWeakestTransition() {
+    let maxW = 0, pair = null;
+    for (let p in state.transitions) {
+      const w = state.transitions[p].weight || 0;
+      if (w > maxW) { maxW = w; pair = p; }
     }
+    return pair;
+  },
+
+  evaluateLevelReady() {
+    if (state.totalStrokes < 50)
+      return { score:0, status:'⏳ Mengumpulkan data...', acc:0, jitter:0 };
+
+    const acc = state.correctStrokes / state.totalStrokes;
+    const avgJ = Analytics.getAvgJitter();
+    const stability = Math.max(0, 1 - (avgJ / 220));
+    const finalScore = Math.round((acc * 0.4 + stability * 0.6) * 100);
+
+    let status;
+    if      (finalScore > 85 && acc > 0.95) status = '🟢 READY — Siap naik level.';
+    else if (acc < 0.90)                    status = '🟡 HOLD — Tingkatkan akurasi dulu.';
+    else                                    status = '🔵 PRACTICE — Stabilkan ritme jitter.';
+
+    return { score:finalScore, status, acc: Math.round(acc*100), jitter: Math.round(avgJ) };
+  }
 };
 
-// --- UI CONTROLLER ---
+/* ── [UI-09] RAF-BATCHED UI CONTROLLER ───────────────────────── */
 const UI = {
-    init() {
-        const keys = [...CONFIG.BASE_KEYS.LEFT, ...CONFIG.BASE_KEYS.RIGHT];
-        const kMap = document.getElementById('keyboard-map');
-        keys.forEach(k => {
-            const div = document.createElement('div');
-            div.className = 'key';
-            div.id = `key-${k}`;
-            div.textContent = k.toUpperCase();
-            kMap.appendChild(div);
-        });
-        this.renderNewWord();
-    },
+  _raf: null,
 
-    renderNewWord() {
-        state.currentWord = Generator.generate();
-        const targetEl = document.getElementById('target');
-        targetEl.innerHTML = "";
-        [...state.currentWord].forEach(c => {
-            const s = document.createElement('span');
-            s.textContent = c;
-            targetEl.appendChild(s);
-        });
-        document.getElementById('input').value = "";
-    },
+  init() {
+    // Build heatmap keyboard
+    const all = [...CONFIG.BASE_KEYS.LEFT, ...CONFIG.BASE_KEYS.RIGHT];
+    const kMap = document.getElementById('keyboard-map');
+    kMap.innerHTML = '';
+    all.forEach(k => {
+      const d = document.createElement('div');
+      d.className = 'key';
+      d.id = `key-${k}`;
+      d.textContent = k.toUpperCase();
+      kMap.appendChild(d);
+    });
 
-    updateDash() {
-        const evaluation = Advisor.evaluateLevelReady();
-        document.getElementById('readiness-score').textContent = evaluation.score + "%";
-        document.getElementById('advisor-content').textContent = evaluation.status;
-        document.getElementById('jitter-text').textContent = `Jitter: ${evaluation.jitter || 0}ms`;
-        document.getElementById('stat-acc').textContent = (evaluation.acc || 0) + "%";
-        
-        // Rhythm Bar
-        const rBar = document.getElementById('rhythm-bar');
-        rBar.style.width = Math.min(100, (evaluation.score || 0)) + "%";
-        rBar.style.background = evaluation.score > 80 ? 'var(--fresh-green)' : 'var(--warn-yellow)';
+    document.getElementById('lvl-num').textContent  = state.level;
+    document.getElementById('lvl-name').textContent = CONFIG.LEVELS[state.level-1].name.toUpperCase();
+    this.renderNewWord();
+  },
 
-        // Transitions List (Top 3 Slowest)
-        const transList = document.getElementById('transition-list');
-        const sorted = Object.entries(state.transitions).sort((a,b) => b[1].avg - a[1].avg).slice(0,3);
-        transList.innerHTML = sorted.map(s => `<div>${s[0].toUpperCase()} <span style="color:var(--alert-red)">${Math.round(s[1].avg)}ms</span></div>`).join('');
+  renderNewWord() {
+    state.currentWord = Generator.generate();
+    const el = document.getElementById('target');
+    el.innerHTML = '';
+    [...state.currentWord].forEach(c => {
+      const s = document.createElement('span');
+      s.textContent = c;
+      el.appendChild(s);
+    });
+    document.getElementById('input').value = '';
+    state.lastChar    = null;
+    state.lastCharTime = 0;
+  },
 
-        // Fatigue Detection
-        if (evaluation.jitter > 150 && state.totalStrokes > 100) {
-            document.getElementById('fatigue-warning').style.display = 'block';
-        } else {
-            document.getElementById('fatigue-warning').style.display = 'none';
-        }
+  // Schedule a batched RAF update
+  updateDash() {
+    if (this._raf) return;
+    this._raf = requestAnimationFrame(() => {
+      this._raf = null;
+      this._flush();
+    });
+  },
+
+  _flush() {
+    const eval_   = Advisor.evaluateLevelReady();
+    const fatigue  = Fatigue.compute();
+    const avgR     = Analytics.getAvgReaction();
+    const bestR    = Analytics.getBestReaction();
+    const floor    = Analytics.getAdaptiveFloor();
+    const acc      = eval_.acc;
+
+    // Readiness
+    document.getElementById('readiness-score').textContent = eval_.score + '%';
+    document.getElementById('readiness-bar').style.width   = Math.min(100,eval_.score) + '%';
+    document.getElementById('readiness-bar').style.background =
+      eval_.score > 80 ? 'var(--green)' : eval_.score > 50 ? 'var(--yellow)' : 'var(--red)';
+    document.getElementById('advisor-content').textContent = eval_.status;
+
+    // Readiness pill
+    let pillHTML = '';
+    if      (eval_.score > 85 && acc > 95) pillHTML = '<span class="pill pill-green">READY</span>';
+    else if (acc < 90)                      pillHTML = '<span class="pill pill-yellow">HOLD</span>';
+    else                                    pillHTML = '<span class="pill pill-blue">PRACTICE</span>';
+    document.getElementById('readiness-pill').innerHTML = pillHTML;
+
+    // Jitter
+    document.getElementById('jitter-text').textContent = `Jitter: ${eval_.jitter}ms  /  Avg: ${avgR}ms`;
+    document.getElementById('rhythm-bar').style.width      = Math.min(100,eval_.score) + '%';
+    document.getElementById('rhythm-bar').style.background =
+      eval_.score > 75 ? 'var(--green)' : eval_.score > 45 ? 'var(--yellow)' : 'var(--red)';
+
+    // Adaptive floor
+    document.getElementById('threshold-text').textContent = `Floor: ${floor}ms`;
+
+    // Fatigue
+    const fColor = fatigue > 70 ? 'var(--red)' : fatigue > 40 ? 'var(--yellow)' : 'var(--green)';
+    document.getElementById('fatigue-number').textContent      = fatigue + '%';
+    document.getElementById('fatigue-number').style.color      = fColor;
+    document.getElementById('fatigue-bar').style.width         = fatigue + '%';
+    document.getElementById('fatigue-bar').style.background    = fColor;
+    document.getElementById('fatigue-detail').textContent      =
+      `Jitter ${state.fatigueComps.jitter}% · Drift ${state.fatigueComps.drift}% · Acc ${state.fatigueComps.acc}%`;
+    document.getElementById('fatigue-warning').style.display   = fatigue > 60 ? 'block' : 'none';
+
+    // Stats
+    document.getElementById('stat-acc').textContent     = acc > 0 ? acc + '%' : '—';
+    document.getElementById('stat-react').textContent   = avgR  > 0 ? avgR  + 'ms' : '—';
+    document.getElementById('stat-best').textContent    = bestR ? bestR + 'ms' : '—';
+    document.getElementById('stat-strokes').textContent = state.totalStrokes;
+    document.getElementById('stat-errors').textContent  = state.errors;
+
+    // Transitions (top 5 slowest with ≥3 samples)
+    const sorted = Object.entries(state.transitions)
+      .filter(([,d]) => d.times.length >= 3)
+      .sort(([,a],[,b]) => b.avg - a.avg)
+      .slice(0, 5);
+
+    const tList = document.getElementById('transition-list');
+    if (sorted.length === 0) {
+      tList.innerHTML = '<div style="color:var(--muted);font-size:11px">Belum ada data...</div>';
+    } else {
+      tList.innerHTML = sorted.map(([pair, d]) => {
+        const c = d.avg > 400 ? 'var(--red)' : d.avg > 250 ? 'var(--yellow)' : 'var(--green)';
+        const bar = Math.min(100, (d.avg / 600)*100);
+        return `<div class="trans-row">
+          <span>${pair.replace('>',' → ').toUpperCase()}</span>
+          <span style="color:${c};font-weight:700">${Math.round(d.avg)}ms</span>
+        </div>
+        <div style="height:2px;background:rgba(255,255,255,.04);border-radius:99px;margin-bottom:5px;overflow:hidden">
+          <div style="height:100%;width:${bar}%;background:${c};transition:width .4s"></div>
+        </div>`;
+      }).join('');
     }
+
+    // ── [UI-05] Real heatmap visualization
+    this._updateHeatmap();
+  },
+
+  _updateHeatmap() {
+    const all = [...CONFIG.BASE_KEYS.LEFT, ...CONFIG.BASE_KEYS.RIGHT];
+    all.forEach(k => {
+      const el = document.getElementById(`key-${k}`);
+      if (!el) return;
+      let total = 0, count = 0;
+      for (let pair in state.transitions) {
+        const [from, to] = pair.split('>');
+        if (from === k || to === k) {
+          if (state.transitions[pair].times.length >= 2) {
+            total += state.transitions[pair].avg;
+            count++;
+          }
+        }
+      }
+      if (count === 0) { el.className = 'key'; return; }
+      const avg = total / count;
+      if      (avg > 360) el.className = 'key weak';
+      else if (avg > 200) el.className = 'key unstable';
+      else                el.className = 'key mastered';
+    });
+  }
 };
 
-// --- INPUT LOGIC ---
+/* ── INPUT HANDLER ───────────────────────────────────────────── */
 const inputEl = document.getElementById('input');
+
 inputEl.addEventListener('input', (e) => {
-    const val = e.target.value;
-    const target = state.currentWord;
-    const now = Date.now();
-    const spans = document.querySelectorAll('.target span');
-    
-    // Calculate adaptive delay threshold (Recent average * 0.6)
-    const recentAvg = state.recentJitters.length > 0 ? (state.recentJitters[0] + 200) : 400;
-    const dynamicFloor = Math.max(CONFIG.MIN_FLOOR_MS, recentAvg * 0.5);
-    document.getElementById('threshold-text').textContent = `Floor: ${Math.round(dynamicFloor)}ms`;
+  const val    = e.target.value;
+  const target = state.currentWord;
+  // ── [CORE-01] High-precision timing with performance.now()
+  const now    = performance.now();
+  const spans  = document.querySelectorAll('#target span');
+  const floor  = Analytics.getAdaptiveFloor();
+  const advEl  = document.getElementById('advice');
 
-    for(let i=0; i<val.length; i++) {
-        if (val[i] === target[i]) {
-            if (i === val.length - 1) {
-                const delay = state.lastCharTime ? now - state.lastCharTime : 0;
-                
-                // Precision Check
-                if (delay > 0 && delay < dynamicFloor) {
-                    document.getElementById('advice').textContent = "⚠️ TERLALU CEPAT! Jaga ritme, bukan speed.";
-                    document.getElementById('advice').style.color = "var(--warn-yellow)";
-                    // Kita tidak reset, tapi beri peringatan visual
-                }
+  for (let i = 0; i < val.length; i++) {
+    if (val[i] === target[i]) {
+      if (i === val.length - 1) {
+        const delay = state.lastCharTime ? now - state.lastCharTime : 0;
 
-                Analytics.track(val[i], target[i-1] || null, delay);
-                state.correctStrokes++;
-                spans[i].className = "correct";
-            }
-        } else {
-            state.errors++;
-            spans[i].className = "error";
-            // Flash error
-            inputEl.value = "";
-            document.getElementById('advice').textContent = "Salah ketik. Tenangkan jari.";
-            document.getElementById('advice').style.color = "var(--alert-red)";
-            return;
+        // ── [CORE-10] Impossible speed guard (macro/autoclick)
+        if (delay > 0 && delay < CONFIG.IMPOSSIBLE_SPEED_MS) {
+          console.warn(`[Engine] Ignored impossible speed: ${delay.toFixed(1)}ms`);
+          spans[i].className = 'correct';
+          state.lastCharTime = now;
+          state.lastChar     = val[i];
+          return;
         }
-    }
 
-    state.lastCharTime = now;
+        // Too-fast feedback
+        if (delay > 0 && delay < floor) {
+          advEl.textContent = `⚡ ${Math.round(delay)}ms — terlalu cepat, jaga ritme`;
+          advEl.style.color = 'var(--yellow)';
+        } else if (delay > 0) {
+          advEl.textContent = '';
+        }
 
-    if (val.length === target.length) {
-        setTimeout(() => {
-            UI.renderNewWord();
-            UI.updateDash();
-            state.lastCharTime = 0;
-        }, 100);
+        if (delay > 0) Analytics.track(val[i], state.lastChar, delay);
+        state.correctStrokes++;
+        state.lastChar = val[i];
+        spans[i].className = 'correct';
+      }
+    } else {
+      state.errors++;
+      spans[i].className = 'wrong';
+      inputEl.value = '';
+      inputEl.classList.add('shake');
+      setTimeout(() => inputEl.classList.remove('shake'), 200);
+      advEl.textContent = '✗ Salah ketik — tenangkan jari';
+      advEl.style.color = 'var(--red)';
+      return;
     }
+  }
+
+  state.lastCharTime = now;
+
+  if (val.length === target.length) {
+    setTimeout(() => {
+      UI.renderNewWord();
+      UI.updateDash();
+      advEl.textContent = '';
+    }, 110);
+  }
 });
 
-// --- INIT ---
-window.onload = () => {
-    UI.init();
-    setTimeout(() => {
-        document.getElementById('splash').classList.add('fade-out');
-        inputEl.focus();
-    }, 2000);
-};
+/* ── [UI-04] FOCUS RECOVERY ─────────────────────────────────── */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible')
+    setTimeout(() => inputEl.focus(), 80);
+});
+document.addEventListener('click',      () => inputEl.focus());
+document.addEventListener('touchstart', () => inputEl.focus(), { passive:true });
 
-// Auto-focus
-document.addEventListener('click', () => inputEl.focus());
+/* ── [PWA-10] ONLINE / OFFLINE LISTENERS ─────────────────────── */
+const offlineBadge = document.getElementById('offline-badge');
+window.addEventListener('online',  () => { offlineBadge.style.display = 'none'; });
+window.addEventListener('offline', () => { offlineBadge.style.display = 'block'; });
+if (!navigator.onLine) offlineBadge.style.display = 'block';
 
+/* ── [PWA-01..07] SERVICE WORKER (single-file blob) ──────────── */
+function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+
+  // ── [PWA-02] Versioned cache  [PWA-03] Old-cache cleanup
+  // ── [PWA-05] Offline-first    [PWA-07] Icon versioning built into cache key
+  const swSrc = /* ── inlined SW ── */`
+const CACHE_VER  = '${APP_VERSION}';
+const CACHE_NAME = 'typingai-v${APP_VERSION}';
+const STALE_KEYS = ['typingai-v3.0.0','typingai-v2.0.0','typingai-v1.0.0'];
+
+self.addEventListener('install', ev => {
+  console.log('[SW] install', CACHE_VER);
+  ev.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(c => c.addAll([]).catch(()=>{}))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', ev => {
+  console.log('[SW] activate', CACHE_VER);
+  ev.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys
+          .filter(k => k.startsWith('typingai-') && k !== CACHE_NAME)
+          .map(k => { console.log('[SW] delete old cache:', k); return caches.delete(k); })
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', ev => {
+  if (ev.request.method !== 'GET') return;
+  ev.respondWith(
+    caches.match(ev.request).then(cached => {
+      const net = fetch(ev.request).then(res => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(ev.request, clone));
+        }
+        return res;
+      }).catch(() => cached || new Response('Offline', {status:503}));
+      return cached || net;
+    })
+  );
+});
+
+self.addEventListener('message', ev => {
+  if (!ev.data) return;
+  if (ev.data.type === 'CHECK_VERSION' && ev.ports[0])
+    ev.ports[0].postMessage({ version: CACHE_VER });
+  if (ev.data.type === 'SKIP_WAITING')
+    self.skipWaiting();
+});
+`;
+
+  try {
+    const blob  = new Blob([swSrc], { type:'application/javascript' });
+    const swURL = URL.createObjectURL(blob);
+
+    navigator.serviceWorker.register(swURL, { scope:'.' }).then(reg => {
+      console.log('[App] SW registered');
+
+      // ── [PWA-04] Update detection notification
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            const banner = document.getElementById('update-banner');
+            banner.style.display = 'block';
+            banner.onclick = () => {
+              nw.postMessage({ type:'SKIP_WAITING' });
+              window.location.reload();
+            };
+          }
+        });
+      });
+
+      // ── [PWA-06] Version sync between SW, localStorage, runtime
+      if (reg.active) {
+        const ch = new MessageChannel();
+        ch.port1.onmessage = e => {
+          if (e.data?.version && e.data.version !== APP_VERSION)
+            console.log('[App] SW version mismatch:', e.data.version, '≠', APP_VERSION);
+        };
+        reg.active.postMessage({ type:'CHECK_VERSION' }, [ch.port2]);
+      }
+    }).catch(e => console.warn('[App] SW register failed:', e));
+
+    // Reload on controller change
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) { refreshing = true; window.location.reload(); }
+    });
+
+  } catch(e) { console.warn('[App] SW setup failed:', e); }
+}
+
+/* ── [PWA-09] INSTALL PROMPT HANDLER ─────────────────────────── */
+let _deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredPrompt = e;
+  const banner = document.getElementById('install-banner');
+  banner.style.display = 'flex';
+});
+
+document.getElementById('btn-install').addEventListener('click', () => {
+  if (!_deferredPrompt) return;
+  document.getElementById('install-banner').style.display = 'none';
+  _deferredPrompt.prompt();
+  _deferredPrompt.userChoice.then(c => {
+    console.log('[PWA] install outcome:', c.outcome);
+    _deferredPrompt = null;
+  });
+});
+
+document.getElementById('btn-dismiss').addEventListener('click', () => {
+  document.getElementById('install-banner').style.display = 'none';
+});
+
+window.addEventListener('appinstalled', () => {
+  console.log('[PWA] installed ✓');
+  _deferredPrompt = null;
+  document.getElementById('install-banner').style.display = 'none';
+});
+
+/* ── [PWA-?] MANIFEST INJECTION (single-file blob) ───────────── */
+function injectManifest() {
+  // ── [PWA-07] Icon versioning
+  const iconSVG = (size) => {
+    const r = size < 256 ? 20 : 48;
+    const fs = Math.round(size * .55);
+    return btoa(
+      `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${size} ${size}'>` +
+      `<rect width='${size}' height='${size}' rx='${r}' fill='%230a0f1e'/>` +
+      `<text x='50%' y='55%' font-size='${fs}' text-anchor='middle' dominant-baseline='middle' fill='%2338bdf8' font-family='monospace' font-weight='900'>T</text>` +
+      `</svg>`
+    );
+  };
+
+  const manifest = {
+    name:             'Motor-Learning Typing Trainer',
+    short_name:       'TypingAI',
+    description:      'Adaptive motor-learning typing trainer v' + APP_VERSION,
+    start_url:        './',
+    display:          'standalone',
+    background_color: '#0a0f1e',
+    theme_color:      '#38bdf8',
+    orientation:      'portrait-primary',
+    icons: [
+      { src:'data:image/svg+xml;base64,' + iconSVG(192), sizes:'192x192', type:'image/svg+xml', purpose:'any maskable' },
+      { src:'data:image/svg+xml;base64,' + iconSVG(512), sizes:'512x512', type:'image/svg+xml', purpose:'any maskable' }
+    ]
+  };
+
+  try {
+    const blob = new Blob([JSON.stringify(manifest)], { type:'application/json' });
+    const link = document.createElement('link');
+    link.rel   = 'manifest';
+    link.href  = URL.createObjectURL(blob);
+    document.head.appendChild(link);
+  } catch(e) { console.warn('[App] Manifest injection failed:', e); }
+}
+
+/* ── INIT ─────────────────────────────────────────────────────── */
+window.addEventListener('load', () => {
+  // Restore persisted state
+  const saved = Storage.load();
+  if (saved) {
+    Storage.merge(saved);
+    console.log('[App] State restored — strokes:', state.totalStrokes);
+  }
+
+  document.getElementById('splash-ver').textContent =
+    `v${APP_VERSION}  ·  Schema v${SCHEMA_VERSION}  ·  ${saved ? '💾 State loaded' : '🆕 Fresh start'}`;
+
+  UI.init();
+
+  // Splash fade
+  setTimeout(() => {
+    const splash = document.getElementById('splash');
+    splash.classList.add('fade-out');
+    setTimeout(() => { splash.style.display = 'none'; inputEl.focus(); }, 850);
+  }, 2000);
+
+  // PWA
+  injectManifest();
+  registerSW();
+});
 </script>
 </body>
 </html>
