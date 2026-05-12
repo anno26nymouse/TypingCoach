@@ -1,756 +1,359 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Typing AI Trainer - Precision Mode v2</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f172a">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<style>
-/* ===== COLOR PALETTE & VARIABLES ===== */
-:root {
-    --deep-navy: #0f172a;
-    --navy-panel: #1e293b;
-    --primary-blue: #38bdf8;
-    --soft-grey: #94a3b8;
-    --fresh-green: #22c55e;
-    --alert-red: #EF233C;
-    --warn-yellow: #f59e0b;
-}
-
-body {
-    margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    background: var(--deep-navy);
-    color: white;
-    overflow: hidden;
-}
-
-/* ===== LAYOUT GRID ===== */
-.app {
-    display: grid;
-    grid-template-columns: 280px 1fr 320px;
-    height: 100vh;
-}
-
-/* ===== PANELS ===== */
-.sidebar, .rightbar {
-    background: rgba(30, 41, 59, 0.4);
-    backdrop-filter: blur(10px);
-    padding: 20px;
-    border-right: 1px solid rgba(255,255,255,0.05);
-    overflow-y: auto;
-}
-.rightbar {
-    border-right: none;
-    border-left: 1px solid rgba(255,255,255,0.05);
-}
-
-/* ===== CARDS & WIDGETS ===== */
-.card {
-    background: rgba(255,255,255,0.03);
-    border-radius: 14px;
-    padding: 18px;
-    margin-bottom: 16px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    border: 1px solid rgba(255,255,255,0.02);
-}
-
-.card h3 {
-    margin: 0 0 12px;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--soft-grey);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.card h3 i {
-    color: var(--primary-blue);
-}
-
-/* ===== PROGRESS BARS ===== */
-.bar-container {
-    height: 8px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 10px;
-    overflow: hidden;
-    margin-top: 5px;
-}
-
-.bar-fill {
-    display: block;
-    height: 100%;
-    width: 0%;
-    background: var(--primary-blue);
-    border-radius: 10px;
-    transition: width 0.3s ease, background-color 0.3s ease;
-}
-
-.bar-fill.success { background: var(--fresh-green); }
-.bar-fill.danger { background: var(--alert-red); }
-
-/* ===== CIRCULAR METRIC ===== */
-.metric-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.circle-metric {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    border: 4px solid var(--fresh-green);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);
-    transition: border-color 0.3s ease;
-}
-
-.circle-metric.low {
-    border-color: var(--alert-red);
-    box-shadow: 0 0 15px rgba(239, 35, 60, 0.2);
-}
-
-/* ===== CENTER MAIN AREA ===== */
-.main {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    position: relative;
-}
-
-.target {
-    font-size: 65px;
-    margin: 20px 0;
-    letter-spacing: 12px;
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-}
-.target span { opacity: 0.3; transition: opacity 0.1s, color 0.1s; }
-.target span.correct { color: var(--fresh-green); opacity: 1; text-shadow: 0 0 10px rgba(34, 197, 94, 0.4); }
-.target span.error-flash { color: var(--alert-red); opacity: 1; }
-
-input {
-    font-size: 40px;
-    padding: 12px 20px;
-    width: 250px;
-    text-align: center;
-    border-radius: 12px;
-    border: 2px solid rgba(255,255,255,0.1);
-    background: rgba(0,0,0,0.2);
-    color: white;
-    outline: none;
-    transition: border-color 0.3s;
-    font-family: 'Courier New', monospace;
-}
-input:focus { border-color: var(--primary-blue); box-shadow: 0 0 20px rgba(56, 189, 248, 0.1); }
-
-/* Main Area Info Text */
-.repeat-info { margin-top: 15px; font-size: 14px; color: var(--warn-yellow); font-weight: bold; min-height: 20px; }
-.advice { margin-top: 10px; font-size: 14px; color: var(--primary-blue); min-height: 20px; }
-.slow-badge { display: inline-block; margin-top: 10px; font-size: 13px; background: rgba(56, 189, 248, 0.1); padding: 6px 14px; border-radius: 20px; color: var(--primary-blue); border: 1px solid rgba(56, 189, 248, 0.2); min-height: 20px; }
-
-/* Main Area Controls */
-.controls { position: absolute; top: 30px; display: flex; gap: 10px; }
-button {
-    background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1);
-    padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s;
-    font-size: 12px; font-weight: bold; text-transform: uppercase; display: flex; align-items: center; gap: 6px;
-}
-button:hover { background: rgba(255,255,255,0.1); border-color: var(--primary-blue); color: var(--primary-blue); }
-
-/* ===== RIGHT PANEL VISUALS ===== */
-.graph {
-    height: 70px;
-    display: flex;
-    align-items: flex-end;
-    gap: 4px;
-    padding-top: 10px;
-}
-.graph-bar {
-    flex: 1;
-    background: var(--primary-blue);
-    border-radius: 4px 4px 0 0;
-    min-height: 2px;
-    transition: height 0.3s ease;
-    opacity: 0.7;
-}
-
-.timeline { display: flex; gap: 6px; flex-wrap: wrap; }
-.dot { width: 12px; height: 12px; border-radius: 50%; background: var(--fresh-green); opacity: 0.2; transition: opacity 0.3s, background 0.3s; }
-.dot.filled { opacity: 1; }
-.dot.error { background: var(--alert-red); }
-
-.focus-list { font-family: monospace; font-size: 14px; line-height: 1.8; color: var(--soft-grey); }
-.focus-bar { display: inline-block; height: 10px; background: var(--alert-red); margin-left: 10px; border-radius: 4px; }
-
-.keyboard {
-    display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    gap: 6px;
-    margin-top: 10px;
-}
-.key {
-    padding: 12px 0;
-    background: rgba(255,255,255,0.05);
-    text-align: center;
-    border-radius: 6px;
-    font-weight: bold;
-    font-size: 14px;
-    color: var(--soft-grey);
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255,255,255,0.02);
-}
-.key.hot { background: rgba(239, 35, 60, 0.2); color: var(--alert-red); border-color: var(--alert-red); box-shadow: 0 0 10px rgba(239, 35, 60, 0.2); }
-.key.mid { background: rgba(245, 158, 11, 0.2); color: var(--warn-yellow); border-color: var(--warn-yellow); }
-.key.good { background: rgba(34, 197, 94, 0.2); color: var(--fresh-green); border-color: var(--fresh-green); }
-
-/* ===== SPLASH SCREEN ===== */
-#splash {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: var(--deep-navy);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    transition: opacity 0.8s ease-out;
-}
-
-.splash-content { text-align: center; }
-
-.typing-logo {
-    font-family: 'Courier New', monospace;
-    font-size: 2.5rem;
-    border-right: 3px solid var(--primary-blue);
-    white-space: nowrap;
-    overflow: hidden;
-    width: 0;
-    animation: typing 1.5s steps(15, end) forwards;
-    color: var(--primary-blue);
-    text-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
-}
-
-.loader { width: 60px; height: 4px; background: rgba(255,255,255,0.1); margin: 20px auto; position: relative; overflow: hidden; border-radius: 4px; }
-.loader::after { content: ''; width: 30px; height: 100%; background: var(--primary-blue); position: absolute; animation: loading 1s infinite linear; border-radius: 4px; }
-.splash-content p { color: var(--soft-grey); font-size: 14px; margin-top: 15px; letter-spacing: 1px; }
-
-@keyframes typing { from { width: 0 } to { width: 100% } }
-@keyframes loading { 0% { left: -50% } 100% { left: 100% } }
-.fade-out { opacity: 0; pointer-events: none; }
-
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+    <title>Typing AI Trainer - Adaptive Motor-Learning v3</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --deep-navy: #0f172a; --navy-panel: #1e293b; --primary-blue: #38bdf8;
+            --soft-grey: #94a3b8; --fresh-green: #22c55e; --alert-red: #EF233C; --warn-yellow: #f59e0b;
+        }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--deep-navy); color: white; overflow: hidden; }
+        .app { display: grid; grid-template-columns: 300px 1fr 320px; height: 100vh; }
+        .sidebar, .rightbar { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); padding: 20px; border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto; }
+        .rightbar { border-right: none; border-left: 1px solid rgba(255,255,255,0.05); }
+        .card { background: rgba(255,255,255,0.03); border-radius: 14px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.02); }
+        .card h3 { margin: 0 0 10px; font-size: 11px; text-transform: uppercase; color: var(--soft-grey); display: flex; align-items: center; gap: 8px; }
+        .bar-container { height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
+        .bar-fill { display: block; height: 100%; width: 0%; background: var(--primary-blue); transition: width 0.3s; }
+        .main { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; }
+        .target { font-size: 50px; margin: 20px 0; font-family: 'Courier New', monospace; font-weight: bold; }
+        .target span { opacity: 0.2; }
+        .target span.correct { color: var(--fresh-green); opacity: 1; text-shadow: 0 0 15px var(--fresh-green); }
+        .target span.error { color: var(--alert-red); opacity: 1; }
+        input { font-size: 30px; padding: 10px; width: 300px; text-align: center; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; outline: none; font-family: monospace; }
+        .advisor-box { border-left: 3px solid var(--primary-blue); padding-left: 10px; font-size: 13px; line-height: 1.4; }
+        .status-tag { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .tag-ready { background: var(--fresh-green); color: black; }
+        .tag-hold { background: var(--warn-yellow); color: black; }
+        #splash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--deep-navy); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: 0.8s; }
+        .fade-out { opacity: 0; pointer-events: none; }
+        .keyboard { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+        .key { padding: 10px 0; background: rgba(255,255,255,0.05); text-align: center; border-radius: 4px; font-size: 12px; }
+        .key.weak { border: 1px solid var(--alert-red); color: var(--alert-red); }
+    </style>
 </head>
 <body>
 
 <div id="splash">
-    <div class="splash-content">
-        <h1 class="typing-logo">-mode- -tempur-</h1>
-        <div class="loader"></div>
-        <p>Level up↑ Muscle Memory...</p>
-    </div>
+    <h1 style="color: var(--primary-blue); font-family: monospace;">MOTOR-LEARNING V3</h1>
+    <p style="color: var(--soft-grey);">Calibrating Adaptive Neural Sync...</p>
 </div>
 
 <div class="app">
+    <!-- LEFT SIDEBAR: REALTIME ANALYTICS -->
     <div class="sidebar">
         <div class="card">
-            <h3><i class="fa-solid fa-bullseye"></i> Accuracy</h3>
-            <div class="metric-row">
-                <div>
-                    <div style="font-size: 24px; font-weight: bold;" id="acc-text">100%</div>
-                    <div style="font-size: 12px; color: var(--soft-grey);" id="stroke-text">0 / 0 Strokes</div>
-                </div>
-                <div class="circle-metric" id="acc-circle">100%</div>
+            <h3><i class="fa-solid fa-brain"></i> Neural Readiness</h3>
+            <div id="readiness-score" style="font-size: 28px; font-weight: bold; color: var(--primary-blue);">0%</div>
+            <div id="readiness-tag" style="margin-top:5px"></div>
+        </div>
+
+        <div class="card">
+            <h3><i class="fa-solid fa-wave-square"></i> Rhythm Stability</h3>
+            <div id="jitter-text" style="font-size: 14px;">Jitter: 0ms</div>
+            <div class="bar-container" style="margin-top:8px">
+                <div id="rhythm-bar" class="bar-fill"></div>
             </div>
+        </div>
+
+        <div class="card">
+            <h3><i class="fa-solid fa-gauge-high"></i> Dynamic Threshold</h3>
+            <div id="threshold-text" style="font-size: 14px;">Floor: 300ms</div>
+            <p style="font-size: 10px; color: var(--soft-grey);">Sistem memaksa Anda mengetik dalam ritme stabil, bukan maksimal.</p>
+        </div>
+
+        <div class="card" id="coach-card">
+            <h3><i class="fa-solid fa-user-tie"></i> Level Advisor</h3>
+            <div id="advisor-content" class="advisor-box">Menganalisa pola...</div>
+        </div>
+    </div>
+
+    <!-- MAIN AREA -->
+    <div class="main">
+        <div style="position: absolute; top: 20px; font-size: 12px; color: var(--primary-blue); letter-spacing: 2px;">
+            LEVEL <span id="lvl-num">1</span>: <span id="lvl-name">ISOLATION</span>
         </div>
         
-        <div class="card">
-            <h3><i class="fa-solid fa-fire"></i> Mode & Streak</h3>
-            <div style="margin-bottom: 8px; font-weight: bold; color: var(--primary-blue);" id="mode-text">Mode: FIX</div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
-                <span id="streak-text">Streak: 0</span>
-                <span id="high-text" style="color: var(--soft-grey)">High: 0</span>
-            </div>
-            <div class="bar-container"><span class="bar-fill success" id="streak-bar" style="width:0%"></span></div>
-        </div>
-
-        <div class="card">
-            <h3><i class="fa-solid fa-dumbbell"></i> Muscle Memory</h3>
-            <div style="font-size: 12px; margin-bottom: 5px; color: var(--soft-grey);">Total Valid Presses</div>
-            <div class="bar-container"><span class="bar-fill" id="muscle-bar" style="width:0%"></span></div>
-        </div>
-    </div>
-
-    <div class="main">
-        <div class="controls">
-            <button onclick="toggleAuto()" id="btn-auto"><i class="fa-solid fa-robot"></i> Auto: ON</button>
-            <button onclick="switchMode()"><i class="fa-solid fa-forward-step"></i> Skip Mode</button>
-        </div>
-
         <div id="target" class="target"></div>
-        <input id="input" autocomplete="off" spellcheck="false" placeholder="...">
-
-        <div id="repeat-info" class="repeat-info"></div>
-        <div id="slow-badge" class="slow-badge" style="display:none;"></div>
-        <div id="advice" class="advice">Ketik untuk mulai...</div>
-
-        <div class="card" style="width: 80%; margin-top: 30px; background: transparent; box-shadow: none; border-color: rgba(255,255,255,0.05);">
-            <h3 style="justify-content: center;"><i class="fa-solid fa-bolt"></i> Avg Reaction Time</h3>
-            <div style="text-align: center; font-size: 20px; font-weight: bold; margin: 10px 0;" id="reaction-text">0 ms</div>
-            <div class="bar-container" style="height: 4px;"><span class="bar-fill" id="reaction-bar" style="width:100%; background: var(--primary-blue)"></span></div>
+        <input id="input" autocomplete="off" spellcheck="false" placeholder="Fokus pada ritme...">
+        
+        <div id="advice" style="margin-top: 20px; font-weight: bold; min-height: 20px; color: var(--soft-grey);"></div>
+        
+        <div id="fatigue-warning" style="display:none; margin-top:10px; color: var(--alert-red); font-size: 12px; animation: pulse 1s infinite;">
+            ⚠️ FATIGUE DETECTED: Precision drop.
         </div>
     </div>
 
+    <!-- RIGHT SIDEBAR: TRANSITION & HEATMAP -->
     <div class="rightbar">
         <div class="card">
-            <h3><i class="fa-solid fa-chart-simple"></i> Speed Graph (ms)</h3>
-            <div class="graph" id="speed-graph">
-                </div>
+            <h3><i class="fa-solid fa-bolt"></i> Transition Mastery</h3>
+            <div id="transition-list" style="font-size: 12px; font-family: monospace;"></div>
         </div>
 
         <div class="card">
-            <h3><i class="fa-solid fa-clock-rotate-left"></i> Error Timeline</h3>
-            <div class="timeline" id="error-timeline">
-                </div>
-        </div>
-
-        <div class="card">
-            <h3><i class="fa-solid fa-magnifying-glass"></i> Focus Keys (Slowest)</h3>
-            <div class="focus-list" id="focus-list">
-                Belum ada data
+            <h3><i class="fa-solid fa-fingerprint"></i> Finger Weakness</h3>
+            <div class="keyboard" id="keyboard-map">
+                <!-- JS Populated -->
             </div>
         </div>
 
         <div class="card">
-            <h3><i class="fa-solid fa-keyboard"></i> Keyboard Heatmap</h3>
-            <div class="keyboard" id="keyboard-heatmap">
-                <div class="key" id="key-s">S</div>
-                <div class="key" id="key-d">D</div>
-                <div class="key" id="key-f">F</div>
-                <div class="key" id="key-j">J</div>
-                <div class="key" id="key-k">K</div>
-                <div class="key" id="key-l">L</div>
-                <div class="key" id="key-;">;</div>
+            <h3><i class="fa-solid fa-history"></i> Session Stats</h3>
+            <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                <span>Accuracy</span><span id="stat-acc">0%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 5px;">
+                <span>Avg Reaction</span><span id="stat-react">0ms</span>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// ===== LOGIC SETTINGS =====
-const MIN_DELAY = 380;
-const STREAK_TO_ADVANCE = 15;
-const FAIL_REPEAT_REQUIRED = 3;
+/**
+ * MOTOR-LEARNING TYPING ENGINE v3
+ * Modular, Adaptive, Procedural.
+ */
 
-// ===== DATA SETS =====
-const confusionSet = ["sd","ds","sds","dsd","sdds","ddss","sdsd","dsds","l;",";l","l;l",";l;","l;;l",";ll;","ll;;",";;ll"];
-const fixSet = [...confusionSet];
-const contraSet = ["sds","dsd","l;l",";l;"];
-const levelUpSet = ["sdfj","dsfj","fjds","l;kj",";lkj","jkl;"];
+const CONFIG = {
+    BASE_KEYS: { LEFT: ['a','s','d','f'], RIGHT: ['j','k','l',';'] },
+    LEVELS: [
+        { id: 1, name: "Isolation", pairs: 2 },
+        { id: 2, name: "Triples", pairs: 3 },
+        { id: 3, name: "Full Rolls", pairs: 4 },
+        { id: 4, name: "Cross-Hand", pairs: 4, alternating: true },
+        { id: 5, name: "Chaos Mode", pairs: 5, chaos: true },
+        { id: 6, name: "Endurance", pairs: 8 }
+    ],
+    MIN_FLOOR_MS: 180, // Absolute fastest limit
+    STABILITY_THRESHOLD: 0.15 // 15% jitter max
+};
 
-let modes = ["fix","precision","contra","level"];
-let currentMode = 0;
-let auto = true;
-let currentSet = [...fixSet];
+// --- DATA PERSISTENCE & STATE ---
+let state = {
+    level: 1,
+    currentWord: "",
+    lastCharTime: 0,
+    transitions: {}, // Map of "s>d" : { times: [], avg: 0 }
+    recentJitters: [],
+    errors: 0,
+    totalStrokes: 0,
+    correctStrokes: 0,
+    sessionStart: Date.now(),
+    history: JSON.parse(localStorage.getItem('typing_history') || '[]')
+};
 
-let index = 0;
-let streak = 0;
-let high = localStorage.getItem("high") || 0;
-
-let lastTime = null;
-let delayMap = {}, countMap = {};
-
-// Tracking UI & Stats
-let failRepeatCount = 0;
-let repeatRequired = false;
-let totalKeystrokes = 0;
-let correctKeystrokes = 0;
-let recentSpeeds = []; 
-let errorHistory = []; 
-
-// DOM Elements Logic
-const targetEl  = document.getElementById("target");
-const inputEl   = document.getElementById("input");
-const modeText  = document.getElementById("mode-text");
-const repeatEl  = document.getElementById("repeat-info");
-const slowBadge = document.getElementById("slow-badge");
-const adviceEl  = document.getElementById("advice");
-
-// DOM Elements Realtime UI
-const accText = document.getElementById("acc-text");
-const strokeText = document.getElementById("stroke-text");
-const accCircle = document.getElementById("acc-circle");
-const streakText = document.getElementById("streak-text");
-const highText = document.getElementById("high-text");
-const streakBar = document.getElementById("streak-bar");
-const reactionText = document.getElementById("reaction-text");
-const reactionBar = document.getElementById("reaction-bar");
-const speedGraph = document.getElementById("speed-graph");
-const errorTimeline = document.getElementById("error-timeline");
-const focusList = document.getElementById("focus-list");
-
-// ===== INITIALIZATION =====
-function initGraph() {
-    speedGraph.innerHTML = '';
-    for(let i=0; i<15; i++) {
-        let bar = document.createElement('div');
-        bar.className = 'graph-bar';
-        bar.style.height = '5%';
-        speedGraph.appendChild(bar);
-    }
-    
-    errorTimeline.innerHTML = '';
-    for(let i=0; i<10; i++) {
-        let dot = document.createElement('div');
-        dot.className = 'dot';
-        errorTimeline.appendChild(dot);
-    }
-}
-initGraph();
-
-// ===== CORE LOGIC =====
-function updateUI() {
-    let word = currentSet[index];
-    targetEl.innerHTML = "";
-    word.split("").forEach(c=>{
-        let span = document.createElement("span");
-        span.textContent = c;
-        targetEl.appendChild(span);
-    });
-    inputEl.value = "";
-    updateRepeatInfo();
-    updateRealtimeDash();
-}
-
-function nextIndex() {
-    return (index+1) % currentSet.length;
-}
-
-function updateRepeatInfo() {
-    if (repeatRequired) {
-        let sisa = FAIL_REPEAT_REQUIRED - failRepeatCount;
-        repeatEl.textContent = `⚠ Ulangi kata ini ${sisa}x lagi dengan benar sebelum lanjut.`;
-    } else {
-        repeatEl.textContent = "";
-    }
-}
-
-function switchMode() {
-    currentMode = (currentMode+1) % modes.length;
-    let m = modes[currentMode];
-    if (m==="fix")       currentSet = [...fixSet];
-    if (m==="precision") currentSet = [...confusionSet];
-    if (m==="contra")    currentSet = [...contraSet];
-    if (m==="level")     currentSet = [...levelUpSet];
-
-    index = 0;
-    streak = 0;
-    modeText.textContent = "Mode: " + m.toUpperCase();
-    repeatRequired = false;
-    failRepeatCount = 0;
-
-    updateUI();
-}
-
-function toggleAuto(){ 
-    auto = !auto; 
-    document.getElementById('btn-auto').innerHTML = auto ? '<i class="fa-solid fa-robot"></i> Auto: ON' : '<i class="fa-solid fa-robot"></i> Auto: OFF';
-}
-
-function triggerError(msg) {
-    totalKeystrokes++;
-    errorHistory.push('error');
-    if(errorHistory.length > 10) errorHistory.shift();
-    
-    adviceEl.innerText = msg;
-    adviceEl.style.color = "var(--alert-red)";
-    streak = 0;
-    triggerRepeat();
-    inputEl.value = "";
-    updateUI();
-}
-
-function triggerRepeat() {
-    if (!repeatRequired) {
-        repeatRequired = true;
-        failRepeatCount = 0;
-    } else {
-        failRepeatCount = 0;
-    }
-}
-
-// ===== INPUT HANDLING =====
-inputEl.addEventListener("input", ()=>{
-    let target = currentSet[index];
-    let spans  = targetEl.querySelectorAll("span");
-    let val    = inputEl.value;
-    let now    = Date.now();
-
-    if (lastTime && val.length > 0) {
-        let delay = now - lastTime;
+// --- PROCEDURAL GENERATOR ---
+const Generator = {
+    generate() {
+        const lvl = CONFIG.LEVELS[state.level - 1];
+        let word = "";
         
-        // Push to speed graph
-        recentSpeeds.push(delay);
-        if(recentSpeeds.length > 15) recentSpeeds.shift();
-
-        // PRECISION RULE
-        if (modes[currentMode]==="precision" && delay < MIN_DELAY) {
-            triggerError("Terlalu cepat! Fokus satu jari, jangan ngebut.");
-            return;
-        }
-
-        let c = val[val.length-1];
-        delayMap[c] = (delayMap[c]||0) + delay;
-        countMap[c] = (countMap[c]||0) + 1;
-    }
-
-    lastTime = now;
-    spans.forEach(s => { s.classList.remove("correct"); s.classList.remove("error-flash"); });
-
-    for (let i = 0; i < val.length; i++){
-        if (val[i] === target[i]){
-            spans[i].classList.add("correct");
-            // Only count correct keystrokes logically when evaluating full string or per char, 
-            // for realtime UI let's count per typed char if it's correct so far
-            if(i === val.length -1) {
-                totalKeystrokes++;
-                correctKeystrokes++;
-                errorHistory.push('correct');
-                if(errorHistory.length > 10) errorHistory.shift();
-            }
+        // Adaptive: Sering munculkan transisi terlemah
+        const weakest = Advisor.getWeakestTransition();
+        
+        if (weakest && Math.random() > 0.4) {
+            word = weakest.replace('>', '');
+            while(word.length < lvl.pairs) word += word[Math.floor(Math.random() * word.length)];
         } else {
-            spans[i].classList.add("error-flash");
-            if ((val[i]==="s"&&target[i]==="d")||(val[i]==="d"&&target[i]==="s")){
-                triggerError("S & D ketuker. Pelan, pisahin jari.");
-            } else if ((val[i]==="l"&&target[i]===";")||(val[i]===";"&&target[i]==="l")){
-                triggerError("L & ; ketuker. Kelingking turun lurus.");
+            if (lvl.chaos) {
+                const all = [...CONFIG.BASE_KEYS.LEFT, ...CONFIG.BASE_KEYS.RIGHT];
+                for(let i=0; i<lvl.pairs; i++) word += all[Math.floor(Math.random()*all.length)];
+            } else if (lvl.alternating) {
+                for(let i=0; i<lvl.pairs/2; i++) {
+                    word += CONFIG.BASE_KEYS.LEFT[Math.floor(Math.random()*4)];
+                    word += CONFIG.BASE_KEYS.RIGHT[Math.floor(Math.random()*4)];
+                }
             } else {
-                triggerError("Kurang fokus, ulangi.");
+                const side = Math.random() > 0.5 ? CONFIG.BASE_KEYS.LEFT : CONFIG.BASE_KEYS.RIGHT;
+                for(let i=0; i<lvl.pairs; i++) word += side[Math.floor(Math.random()*4)];
             }
-            return;
+        }
+        return word;
+    }
+};
+
+// --- ANALYTICS ENGINE ---
+const Analytics = {
+    track(char, prevChar, delay) {
+        state.totalStrokes++;
+        
+        if (prevChar) {
+            const pair = `${prevChar}>${char}`;
+            if (!state.transitions[pair]) state.transitions[pair] = { times: [], avg: 0 };
+            
+            // Simpan 10 record terakhir per transisi
+            state.transitions[pair].times.push(delay);
+            if (state.transitions[pair].times.length > 10) state.transitions[pair].times.shift();
+            
+            state.transitions[pair].avg = state.transitions[pair].times.reduce((a,b)=>a+b,0) / state.transitions[pair].times.length;
+            
+            // Jitter Analysis (Consistency)
+            if (state.transitions[pair].times.length > 2) {
+                const last = state.transitions[pair].times[state.transitions[pair].times.length-1];
+                const prev = state.transitions[pair].times[state.transitions[pair].times.length-2];
+                state.recentJitters.push(Math.abs(last - prev));
+                if (state.recentJitters.length > 20) state.recentJitters.shift();
+            }
         }
     }
+};
 
-    // Word completed
-    if (val.length === target.length){
-        if (repeatRequired) {
-            failRepeatCount++;
-            if (failRepeatCount >= FAIL_REPEAT_REQUIRED) {
-                repeatRequired = false;
-                failRepeatCount = 0;
-                adviceEl.innerText = "✓ Pengulangan selesai. Lanjut!";
-                adviceEl.style.color = "var(--fresh-green)";
-            } else {
-                inputEl.value = "";
-                updateUI();
-                return;
+// --- LEVEL ADVISOR ENGINE ---
+const Advisor = {
+    getWeakestTransition() {
+        let max = 0, pair = null;
+        for (let p in state.transitions) {
+            if (state.transitions[p].avg > max) {
+                max = state.transitions[p].avg;
+                pair = p;
             }
+        }
+        return pair;
+    },
+
+    evaluateLevelReady() {
+        if (state.totalStrokes < 50) return { score: 0, status: "COLLECTING DATA", color: "grey" };
+
+        const acc = (state.correctStrokes / state.totalStrokes);
+        const avgJitter = state.recentJitters.reduce((a,b)=>a+b,0) / state.recentJitters.length;
+        const stability = Math.max(0, 1 - (avgJitter / 200)); 
+        
+        const score = (acc * 0.4) + (stability * 0.6);
+        const finalScore = Math.round(score * 100);
+
+        let recommendation = "";
+        if (finalScore > 85 && acc > 0.95) {
+            recommendation = "🟢 READY: Ritme sangat stabil. Siap naik level.";
+        } else if (acc < 0.90) {
+            recommendation = "🟡 HOLD: Akurasi rendah. Fokus pada presisi.";
         } else {
-            adviceEl.innerText = "Bagus, pertahankan ritme.";
-            adviceEl.style.color = "var(--primary-blue)";
+            recommendation = "🔵 PRACTICE: Kecepatan oke, tapi ritme (jitter) belum konsisten.";
         }
 
-        streak++;
-        if (streak > high){ high = streak; localStorage.setItem("high", high); }
-
-        if (auto && streak >= STREAK_TO_ADVANCE){
-            switchMode();
-            return;
-        }
-
-        index = pickNextIndex();
-        updateUI();
-        updateAnalysis();
+        return { score: finalScore, status: recommendation, acc: Math.round(acc*100), jitter: Math.round(avgJitter) };
     }
-    
-    updateRealtimeDash();
-});
+};
 
-// ===== ADAPTIVE INDEX =====
-function pickNextIndex() {
-    let slowChar = getSlowChar();
-    if (!slowChar) return nextIndex();
-
-    let candidates = [];
-    for (let i = 0; i < currentSet.length; i++) {
-        if (i !== index && currentSet[i].includes(slowChar)) { candidates.push(i); }
-    }
-
-    if (candidates.length > 0 && Math.random() < 0.6) {
-        return candidates[Math.floor(Math.random() * candidates.length)];
-    }
-    return nextIndex();
-}
-
-function getSlowChar() {
-    let avg = Object.keys(delayMap).map(c => [c, delayMap[c] / countMap[c]]);
-    if (avg.length === 0) return null;
-    avg.sort((a,b) => b[1] - a[1]);
-    return avg[0][0];
-}
-
-function updateAnalysis(){
-    let avg = Object.keys(delayMap).map(c => [c, delayMap[c]/countMap[c]]);
-    avg.sort((a,b) => b[1] - a[1]);
-
-    if (avg.length === 0) return;
-
-    let slow = avg[0][0];
-    slowBadge.style.display = 'inline-block';
-    slowBadge.innerHTML = `<i class="fa-solid fa-crosshairs"></i> Fokus adaptif ke: "<b>${slow}</b>"`;
-
-    // Update Focus List in Right Panel
-    focusList.innerHTML = '';
-    let top3 = avg.slice(0, 3);
-    top3.forEach(item => {
-        let char = item[0] === ' ' ? 'Space' : item[0].toUpperCase();
-        let time = Math.round(item[1]);
-        // calc width based on max 1000ms
-        let w = Math.min((time / 1000) * 100, 100); 
-        focusList.innerHTML += `
-            <div style="display:flex; align-items:center; margin-bottom:5px;">
-                <span style="width:20px;">${char}</span> 
-                <span class="focus-bar" style="width:${w}px"></span> 
-                <span style="margin-left:auto; font-size:11px;">${time}ms</span>
-            </div>
-        `;
-    });
-}
-
-// ===== REALTIME UI UPDATES =====
-function updateRealtimeDash() {
-    // 1. Accuracy
-    let acc = totalKeystrokes === 0 ? 100 : Math.round((correctKeystrokes / totalKeystrokes) * 100);
-    accText.textContent = acc + "%";
-    strokeText.textContent = `${correctKeystrokes} / ${totalKeystrokes} Strokes`;
-    accCircle.textContent = acc + "%";
-    if(acc < 90) accCircle.classList.add('low'); else accCircle.classList.remove('low');
-
-    // 2. Streak & Mode
-    streakText.textContent = "Streak: " + streak + " / " + STREAK_TO_ADVANCE;
-    highText.textContent = "High: " + high;
-    let p = Math.min((streak / STREAK_TO_ADVANCE) * 100, 100);
-    streakBar.style.width = p + "%";
-    
-    // 3. Muscle Memory (Volume based)
-    let mBar = Math.min((totalKeystrokes / 500) * 100, 100); // 500 strokes fills the bar
-    document.getElementById('muscle-bar').style.width = mBar + "%";
-
-    // 4. Reaction Time Center Bar
-    let avgSpeed = recentSpeeds.length === 0 ? 0 : recentSpeeds.reduce((a,b)=>a+b,0)/recentSpeeds.length;
-    reactionText.textContent = Math.round(avgSpeed) + " ms";
-    // Target speed mapping: 200ms = 100% width (good), 800ms+ = 10% width
-    let sBar = Math.max(10, 100 - ((avgSpeed - 200) / 6)); 
-    if(avgSpeed === 0) sBar = 100;
-    reactionBar.style.width = Math.min(sBar, 100) + "%";
-    if(avgSpeed > 500) reactionBar.style.background = "var(--alert-red)";
-    else if(avgSpeed > 350) reactionBar.style.background = "var(--warn-yellow)";
-    else reactionBar.style.background = "var(--primary-blue)";
-
-    // 5. Speed Graph (Right Panel)
-    let bars = speedGraph.children;
-    for(let i=0; i<15; i++) {
-        if(recentSpeeds[i]) {
-            // max height mapping: 1000ms = 100% height
-            let h = Math.min((recentSpeeds[i] / 1000) * 100, 100);
-            bars[i].style.height = Math.max(h, 5) + "%";
-            if(recentSpeeds[i] > MIN_DELAY && modes[currentMode] === 'precision') bars[i].style.background = "var(--warn-yellow)";
-            else if (recentSpeeds[i] > 600) bars[i].style.background = "var(--alert-red)";
-            else bars[i].style.background = "var(--primary-blue)";
-        }
-    }
-
-    // 6. Error Timeline
-    let dots = errorTimeline.children;
-    for(let i=0; i<10; i++) {
-        dots[i].className = 'dot'; // reset
-        if(errorHistory[i]) {
-            dots[i].classList.add('filled');
-            if(errorHistory[i] === 'error') dots[i].classList.add('error');
-        }
-    }
-
-    // 7. Keyboard Heatmap
-    let keys = ['s','d','f','j','k','l',';'];
-    keys.forEach(k => {
-        let el = document.getElementById('key-' + k);
-        if(!el) return;
-        el.className = 'key'; // reset
-        if(delayMap[k]) {
-            let avg = delayMap[k] / countMap[k];
-            if(avg > 500) el.classList.add('hot');
-            else if (avg > 350) el.classList.add('mid');
-            else el.classList.add('good');
-        }
-    });
-}
-
-// ===== SERVICE WORKER & SPLASH =====
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-
-      reg.addEventListener('updatefound', () => {
-        const newWorker = reg.installing;
-
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdatePopup();
-          }
+// --- UI CONTROLLER ---
+const UI = {
+    init() {
+        const keys = [...CONFIG.BASE_KEYS.LEFT, ...CONFIG.BASE_KEYS.RIGHT];
+        const kMap = document.getElementById('keyboard-map');
+        keys.forEach(k => {
+            const div = document.createElement('div');
+            div.className = 'key';
+            div.id = `key-${k}`;
+            div.textContent = k.toUpperCase();
+            kMap.appendChild(div);
         });
-      });
+        this.renderNewWord();
+    },
 
-    }).catch(err => console.log('SW fail:', err));
-  });
-}
+    renderNewWord() {
+        state.currentWord = Generator.generate();
+        const targetEl = document.getElementById('target');
+        targetEl.innerHTML = "";
+        [...state.currentWord].forEach(c => {
+            const s = document.createElement('span');
+            s.textContent = c;
+            targetEl.appendChild(s);
+        });
+        document.getElementById('input').value = "";
+    },
 
-function showUpdatePopup() {
-  const btn = document.createElement('button');
-  btn.innerText = "Update Available - Refresh";
-  btn.style.position = "fixed";
-  btn.style.bottom = "20px";
-  btn.style.left = "50%";
-  btn.style.transform = "translateX(-50%)";
-  btn.style.padding = "10px 20px";
-  btn.style.background = "#38bdf8";
-  btn.style.color = "black";
-  btn.style.border = "none";
-  btn.style.borderRadius = "10px";
-  btn.style.zIndex = "9999";
+    updateDash() {
+        const evaluation = Advisor.evaluateLevelReady();
+        document.getElementById('readiness-score').textContent = evaluation.score + "%";
+        document.getElementById('advisor-content').textContent = evaluation.status;
+        document.getElementById('jitter-text').textContent = `Jitter: ${evaluation.jitter || 0}ms`;
+        document.getElementById('stat-acc').textContent = (evaluation.acc || 0) + "%";
+        
+        // Rhythm Bar
+        const rBar = document.getElementById('rhythm-bar');
+        rBar.style.width = Math.min(100, (evaluation.score || 0)) + "%";
+        rBar.style.background = evaluation.score > 80 ? 'var(--fresh-green)' : 'var(--warn-yellow)';
 
-  btn.onclick = () => window.location.reload();
+        // Transitions List (Top 3 Slowest)
+        const transList = document.getElementById('transition-list');
+        const sorted = Object.entries(state.transitions).sort((a,b) => b[1].avg - a[1].avg).slice(0,3);
+        transList.innerHTML = sorted.map(s => `<div>${s[0].toUpperCase()} <span style="color:var(--alert-red)">${Math.round(s[1].avg)}ms</span></div>`).join('');
 
-  document.body.appendChild(btn);
-}
+        // Fatigue Detection
+        if (evaluation.jitter > 150 && state.totalStrokes > 100) {
+            document.getElementById('fatigue-warning').style.display = 'block';
+        } else {
+            document.getElementById('fatigue-warning').style.display = 'none';
+        }
+    }
+};
 
-window.addEventListener('load', () => {
-    updateUI();
-    const splash = document.getElementById('splash');
-    setTimeout(() => {
-        splash.classList.add('fade-out');
+// --- INPUT LOGIC ---
+const inputEl = document.getElementById('input');
+inputEl.addEventListener('input', (e) => {
+    const val = e.target.value;
+    const target = state.currentWord;
+    const now = Date.now();
+    const spans = document.querySelectorAll('.target span');
+    
+    // Calculate adaptive delay threshold (Recent average * 0.6)
+    const recentAvg = state.recentJitters.length > 0 ? (state.recentJitters[0] + 200) : 400;
+    const dynamicFloor = Math.max(CONFIG.MIN_FLOOR_MS, recentAvg * 0.5);
+    document.getElementById('threshold-text').textContent = `Floor: ${Math.round(dynamicFloor)}ms`;
+
+    for(let i=0; i<val.length; i++) {
+        if (val[i] === target[i]) {
+            if (i === val.length - 1) {
+                const delay = state.lastCharTime ? now - state.lastCharTime : 0;
+                
+                // Precision Check
+                if (delay > 0 && delay < dynamicFloor) {
+                    document.getElementById('advice').textContent = "⚠️ TERLALU CEPAT! Jaga ritme, bukan speed.";
+                    document.getElementById('advice').style.color = "var(--warn-yellow)";
+                    // Kita tidak reset, tapi beri peringatan visual
+                }
+
+                Analytics.track(val[i], target[i-1] || null, delay);
+                state.correctStrokes++;
+                spans[i].className = "correct";
+            }
+        } else {
+            state.errors++;
+            spans[i].className = "error";
+            // Flash error
+            inputEl.value = "";
+            document.getElementById('advice').textContent = "Salah ketik. Tenangkan jari.";
+            document.getElementById('advice').style.color = "var(--alert-red)";
+            return;
+        }
+    }
+
+    state.lastCharTime = now;
+
+    if (val.length === target.length) {
         setTimeout(() => {
-            splash.style.display = 'none';
-            inputEl.focus();
-        }, 800);
-    }, 2500);
+            UI.renderNewWord();
+            UI.updateDash();
+            state.lastCharTime = 0;
+        }, 100);
+    }
 });
 
-document.addEventListener("click", ()=> inputEl.focus());
+// --- INIT ---
+window.onload = () => {
+    UI.init();
+    setTimeout(() => {
+        document.getElementById('splash').classList.add('fade-out');
+        inputEl.focus();
+    }, 2000);
+};
+
+// Auto-focus
+document.addEventListener('click', () => inputEl.focus());
 
 </script>
 </body>
